@@ -1,0 +1,42 @@
+# ==========================================
+# Terraform / OpenTofu
+# ==========================================
+
+# Loại bỏ các tệp tin lưu trạng thái (State files)
+# Cực kỳ quan trọng: tệp này chứa thông tin nhạy cảm về hạ tầng của bạn
+*.tfstate
+*.tfstate.*
+
+# Loại bỏ thư mục tạm của Terraform (chứa các provider, modules tải về)
+.terraform/
+
+# Loại bỏ các tệp biến số nhạy cảm (Secrets)
+# Bạn nên lưu các giá trị thực tế trong các tệp này và KHÔNG đẩy lên Git
+*.tfvars
+*.tfvars.json
+
+# Loại bỏ các tệp ghi lại kế hoạch (Plans)
+# Các tệp này có thể chứa dữ liệu nhạy cảm được kết xuất từ cloud
+*.tfplan
+
+# ==========================================
+# Hệ điều hành & IDE
+# ==========================================
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# VS Code / JetBrains
+.vscode/
+.idea/
+*.swp
+
+# ==========================================
+# Nhật ký & Debug
+# ==========================================
+crash.log
+*.log
