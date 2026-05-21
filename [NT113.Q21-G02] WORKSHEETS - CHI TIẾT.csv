@@ -1,0 +1,105 @@
+NT113 - THIẾT KẾ MẠNG,,,,,,,,,,,,,
+GITHUB ĐỒ ÁN,,,,,,,,,,,,,
+KỊCH BẢN,,,,,,,,,,,,,CẤU TRÚC THƯ MỤC
+GIAI ĐOẠN,STT,PHẦN VIỆC,NỘI DUNG,MÔ TẢ,PHỤ TRÁCH,NGÀY BẮT ĐẦU,DEADLINE,ĐẦU RA MONG ĐỢI,LINKS,NOTE,TÌNH TRẠNG,,
+GIAI ĐOẠN 1: NGHIÊN CỨU LÝ THUYẾT & THIẾT KẾ KIẾN TRÚC,1.1,Nghiên cứu nền tảng,Nghiên cứu AWS Networking,"VPC, Subnet, Route Table, IGW, NAT Gateway, Security Group, NACL",All,,,Tài liệu tổng hợp lý thuyết AWS Networking,,Vừa làm vừa tìm hiểu,Đang tiến hành,,"""vietmove-infra/
+├── main.tf                  # root — gọi tất cả modules
+├── variables.tf             # biến chung (region, CIDR...)
+├── outputs.tf
+├── terraform.tfvars         # giá trị thực tế
+│
+├── modules/
+│   ├── vpc_core/            → A phụ trách
+│   ├── vpc_data/            → B phụ trách
+│   ├── vpc_mgmt/            → C phụ trách
+│   ├── security_groups/     → D phụ trách
+│   ├── nacl/                → D phụ trách
+│   ├── transit_gateway/     → C phụ trách
+│   ├── vpn/                 → C phụ trách
+│   ├── sso/                 → C phụ trách
+│   ├── database/            → B phụ trách
+│   ├── app_fargate/         → A phụ trách
+│   ├── edge/                → A phụ trách (CF+WAF+R53)
+│   ├── dr_region/           → B phụ trách
+│   └── monitoring/          → C phụ trách""                                        
+"
+,1.2,,Nghiên cứu VPN & Xác thực,"Site-to-Site VPN, Client VPN, Transit Gateway, IAM Identity Center (SSO), strongSwan",All,,,Nắm được cơ chế VPN + SSO trên AWS,,,Đang tiến hành,,
+,1.3,,Nghiên cứu HA & DR,"Route 53 Failover, Aurora Global DB, Multi-AZ, Multi-Region, CloudFront, WAF",All,,,Hiểu cơ chế DR failover + HA,,,Đang tiến hành,,
+,1.4,,Nghiên cứu Container & Serverless,"ECS Fargate, Lambda, API Gateway, SQS, ECR",All,,,Nắm được cách deploy ứng dụng serverless,,,Đang tiến hành,,
+,1.5,,Nghiên cứu Monitoring,"CloudWatch, CloudTrail, SNS, S3 Logs",All,,,Hiểu pipeline giám sát + cảnh báo,,,Đang tiến hành,,
+,1.6,Thiết kế kiến trúc,Thiết kế topology tổng thể,"Vẽ sơ đồ kiến trúc Multi-VPC (Core/Data/Mgmt) + DR Region, xác định CIDR, AZ layout",All,,Quyền vẽ lại kiến trúc luôn r nè,Sơ đồ kiến trúc (draw.io/Lucidchart),[NT113] Architecture diagram,Diagram mới vẽ lại,Đã hoàn thành,,
+,1.7,,Thiết kế IP Plan & Subnet,"Lập bảng chia IP: VPC Core 10.1.0.0/16, Data 10.2.0.0/16, Mgmt 10.3.0.0/16, DR VPCs",All,,,"Bảng IP Plan chi tiết (public/private subnet, AZ)",Bảng IP Plan chi tiết,Vừa làm vừa tìm hiểu,Đang tiến hành,,
+,1.8,,Thiết kế Security Groups & NACLs,"Định nghĩa SG cho: ALB, Fargate, Aurora, Redis, Bastion, VPN. Viết NACL rules",All,,,Bảng Security Rules Matrix,,,Đang tiến hành,,
+,1.9,,Thiết kế Data Flow & Demo Scenarios,Xác định 5 kịch bản demo (B2B → S2S VPN → Client VPN → Monitoring → DR Failover),All,,,Tài liệu mô tả flow demo,,Theo demo_flow.md,Đã hoàn thành,,
+GIAI ĐOẠN 2: XÂY DỰNG HẠ TẦNG NỀN TẢNG (VPC & Subnet),2.1,VPC Core,Tạo VPC Core 10.1.0.0/16,"3 AZ × 2 subnet (public + private), route tables, IGW",A,,,"VPC Core hoạt động, subnet đúng AZ",GIAI ĐOẠN 2: XÂY DỰNG HẠ TẦNG NỀN TẢNG (VPC & Subnet),Nền tảng cho Fargate + ALB,Đã hoàn thành,,
+,2.2,,NAT Gateway (3 AZ),Elastic IP + NAT Gateway mỗi AZ trong VPC Core,A,,,Private subnet ra được Internet,,,Đã hoàn thành,,
+,2.3,VPC Data,Tạo VPC Data Layer 10.2.0.0/16,"3 AZ × 1 private subnet, route tables",B,,,VPC Data hoạt động,,Chỉ private subnet,,,
+,2.4,VPC Mgmt,Tạo VPC Security & Mgmt 10.3.0.0/16,"2 AZ × 1 public subnet, route tables",C,,,VPC Mgmt hoạt động,,Cho Bastion Host,,,
+,2.5,Security,Tạo toàn bộ Security Groups,"sg-alb, sg-fargate, sg-aurora, sg-redis, sg-bastion, sg-vpn",D,,,Tất cả SG đã tạo đúng rules,,Theo bảng thiết kế 1.8,,,
+,2.6,,Tạo NACLs,Rules cho public/private subnet các VPC,D,,,NACL rules hoạt động,,,,,
+,2.7,Checklist,,"- VPC đúng CIDR
+- Subnet đúng AZ
+- Route table public→IGW, private→NAT
+- SG đủ rules",All,,,"Tất cả VPC, subnet, route table, IGW phải tạo xong. Ping được giữa các subnet cùng VPC.",,,,,
+GIAI ĐOẠN 3: KẾT NỐI & BẢO MẬT (Transit Gateway + VPN + SSO),3.1,Transit GW,Tạo Transit Gateway Region 1,TGW + route tables,C,,,TGW hoạt động,,Hub trung tâm,,,
+,3.2,,Attach VPC Core vào TGW,VPC attachment + route propagation,A,,,VPC Core reachable qua TGW,,,,,
+,3.3,,Attach VPC Data vào TGW,VPC attachment,B,,,VPC Data reachable qua TGW,,,,,
+,3.4,,Attach VPC Mgmt vào TGW,VPC attachment,C,,,VPC Mgmt reachable qua TGW,,,,,
+,3.5,VPC Endpoint,VPC Endpoint cho VPC Core,"ECR, S3, CloudWatch Logs",A,,,Fargate pull image qua private network,,"Giảm cost, tăng bảo mật",,,
+,3.6,,VPC Endpoint cho VPC Data,S3,B,,,Data Layer truy cập S3 nội bộ,,,,,
+,3.7,,VPC Endpoint cho VPC Mgmt,SSM Session Manager,C,,,Bastion dùng SSM,,,,,
+,3.8,S2S VPN,S2S VPN Đà Nẵng → TGW,"Customer Gateway (EC2 + strongSwan mô phỏng), VPN connection",C,,,VPN tunnel status UP (xanh),,Dùng EC2 giả lập CGW,,,
+,3.9,,S2S VPN Hà Nội → TGW,Customer Gateway mô phỏng,C,,,VPN tunnel status UP,,,,,
+,3.10,Client VPN,Client VPN Endpoint (VPC Core),"Certificate, association subnet, authorization rules",C,,,Nhân viên remote connect VPN thành công,,,,,
+,3.11,SSO,IAM Identity Center (SSO),"Tạo user, group, permission sets, liên kết Client VPN",C,,,SSO đăng nhập → VPN connect → truy cập TMS,,Đề tài yêu cầu đích danh,,,
+,3.12,Bastion,Deploy Bastion Host (2 AZ),"EC2 trong VPC Mgmt, jump server quản trị",C,,,SSH qua Bastion vào private resource,,,,,
+,3.13,Test,Test kết nối end-to-end,"CGW → TGW → VPC Core, Client VPN → TMS",D,,,Report test kết nối pass,,Cần ít nhất 2 người verify,,,
+,3.14,Checklist,,"- Bastion ping VPC Core
+- VPC Core ping VPC Data
+- TGW routes đủ
+- S2S UP 
+- Client VPN connected
+- SSO login OK",All,,,Tất cả VPC kết nối qua TGW. Chi nhánh + remote VPN hoạt động.,,,,,
+"GIAI ĐOẠN 4: DATABASE, ỨNG DỤNG & EDGE SERVICES",4.1,Database,Deploy Aurora cluster,"Primary (Writer) + 2 Replica (Reader), 3 AZ",B,,,Aurora writer endpoint hoạt động,,,,,
+,4.2,,Deploy ElastiCache Redis,"Cluster mode, 3 AZ",B,,,Redis cluster endpoint hoạt động,,Cache session + trạng thái đơn,,,
+,4.3,,Cấu hình AWS Backup,"Backup plan cho Aurora (daily), point-in-time recovery",B,,,Backup plan active,,,,,
+,4.4,,Test kết nối DB,Từ Bastion/test container → Aurora + Redis endpoint,D,,,Connect thành công qua private network,,,,,
+,4.5,App Deploy,Deploy Fargate (Nginx TMS giả),"ECS cluster, task definition (nginx), service (3 AZ, desired=3)",A,,,"Trang Nginx ""VietMove TMS"" hiển thị",,Dùng public.ecr.aws/nginx/nginx:latest,,,
+,4.6,,Cấu hình ALB,"Target group → Fargate, health check, listener 80/443",A,,,Refresh → hostname thay đổi (LB phân tải),,3 AZ load balancing,,,
+,4.7,,Setup API Gateway + Lambda,REST API endpoint cho mobile tài xế,A,,,API endpoint trả response thành công,,Yêu cầu Y9,,,
+,4.8,,Setup SQS,"Queue nhận message từ Lambda, đệm request",A,,,Lambda → SQS message flow hoạt động,,Chống mất data khi spike,,,
+,4.9,Edge,Setup CloudFront,Distribution trỏ về ALB,A,,,Request đi qua CDN,,,,,
+,4.10,,Setup WAF,"Rules cơ bản (SQL injection, XSS, DDoS L7) gắn CloudFront",A,,,WAF dashboard thấy request count,,,,,
+,4.11,,Setup Route 53,"Domain tms.vietmove.demo, record → CloudFront",A,,,Truy cập domain → trang TMS,,Cần cho DR failover,,,
+,4.12,Optional,Setup EFS,Shared file system mount vào Fargate (nếu cần),A,,,EFS mount target hoạt động,,Tùy chọn — bỏ được,,,
+,4.13,Checklist,,"- ALB → Fargate OK 
+- Aurora + Redis connect OK 
+- API GW → Lambda → SQS OK 
+- Domain → CloudFront → WAF → ALB OK",All,,,"TMS chạy trên Fargate, Aurora + Redis hoạt động, truy cập qua domain name.",,,,,
+GIAI ĐOẠN 5: DR REGION & MONITORING,5.1,DR Infra,VPC-DR Core (2 AZ),"Public + private subnet, IGW, NAT",B,,,VPC DR Core hoạt động,,Region Hà Nội,,,
+,5.2,,VPC-DR Data (2 AZ),Private subnet cho Aurora DR + Redis DR,B,,,VPC DR Data hoạt động,,,,,
+,5.3,,Transit Gateway DR,Attach 2 VPC DR,B,,,TGW DR hoạt động,,,,,
+,5.4,,Inter-Region TGW Peering,Kết nối TGW Region 1 ↔ TGW Region 2,C,,,2 Region kết nối qua peering,,,,,
+,5.5,DR Data,Aurora Global Database,"Replication Region 1 → Region 2, test promote",B,,,Replication lag < 1s,,,,,
+,5.6,,ElastiCache Redis DR,Redis replica tại DR Region,B,,,Redis DR hoạt động,,,,,
+,5.7,DR App,Fargate DR (standby),"Nginx TMS, desired count = 1 (standby)",B,,,"TMS DR hiển thị ""Region: Hà Nội""",,Scale up khi failover,,,
+,5.8,,ALB DR + NAT GW DR,Target group → Fargate DR,B,,,ALB DR hoạt động,,,,,
+,5.9,DR DNS,Route 53 Failover routing,Health check + failover policy (Primary → DR),B,,,Failover tự động khi Region 1 down,,,,,
+,5.10,DR VPN,S2S VPN Hà Nội → TGW DR,CGW Hà Nội kết nối vào DR TGW,C,,,Chi nhánh HN vào DR qua VPN,,,,,
+,5.11,Monitoring,CloudWatch dashboards + alarms,"CPU Fargate, request count ALB, DB connections",C,,,Dashboard hiện metrics,,,,,
+,5.12,,SNS topic + email subscription,Alarm trigger → SNS → email admin,C,,,Nhận email cảnh báo khi alarm,,,,,
+,5.13,,CloudTrail,Bật audit logging cho toàn account,D,,,API calls được ghi log,,,,,
+,5.14,,S3 bucket (logs),Lưu CloudTrail + CloudWatch logs,D,,,Logs lưu trữ tập trung,,,,,
+,5.15,Checklist,,"- Aurora DR replication OK
+- DR ALB → TMS OK 
+- Route 53 failover → DR thành công
+- CloudWatch alarm → SNS email OK",All,,,"DR failover thành công, giám sát + cảnh báo hoạt động.",,,,,
+"GIAI ĐOẠN 6: TEST END-TO-END, BÁO CÁO & DEMO",6.1,Test,Demo 1: B2B truy cập TMS,Route 53 → CloudFront → WAF → ALB → Fargate,A,,,"Trang TMS hiển thị, LB phân tải",,demo_flow.md,,,
+,6.2,,Demo 2: S2S VPN chi nhánh,"CGW → TGW → VPC Core, ping + truy cập TMS",C,,,Chi nhánh truy cập TMS qua VPN,,,,,
+,6.3,,Demo 3: Client VPN remote,VPN Client → SSO login → TMS,C,,,Nhân viên remote vào được TMS,,,,,
+,6.4,,Demo 4: Monitoring & Cảnh báo,Stop Fargate task → alarm → email SNS → self-healing,C,,,"Nhận email cảnh báo, task tự phục hồi",,,,,
+,6.5,,Demo 5: DR Failover,Stop Region 1 → Route 53 failover → DR Region,B,,,TMS vẫn hoạt động từ DR (Hà Nội),,,,,
+,6.6,Docs,Báo cáo,"Giải thích kiến trúc, lý do chọn dịch vụ, kết quả test",All,,,Báo cáo hoàn chỉnh,,,,,
+,6.7,,Slide,"Flow demo, kiến trúc tổng quan, kết quả",,,,Slide hoàn chỉnh,,,,,
+,6.8,,Demo,,,,,,,,,,
+,6.9,Cleanup,Xóa toàn bộ resource AWS,CloudFormation delete / xóa thủ công tất cả resource,,,,Không còn resource tính phí,,,,,

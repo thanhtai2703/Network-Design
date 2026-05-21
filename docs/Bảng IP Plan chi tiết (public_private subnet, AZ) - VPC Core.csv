@@ -1,0 +1,9 @@
+VPC Core — Trụ sở chính (TP. HCM),,,,
+Dải mạng tổng: 10.1.0.0/16,,,,
+Tên Subnet,Loại Subnet,Availability Zone (AZ),Dải IP (CIDR),Chức năng
+Public-Subnet-1,Public,ap-southeast-1a,10.1.1.0/24,"ALB, NAT-GW 1, Client VPN"
+Public-Subnet-2,Public,ap-southeast-1b,10.1.2.0/24,"ALB, NAT-GW 2"
+Public-Subnet-3,Public,ap-southeast-1c,10.1.3.0/24,"ALB, NAT-GW 3"
+Private-Subnet-1,Private,ap-southeast-1a,10.1.10.0/24,"Fargate TMS, Lambda"
+Private-Subnet-2,Private,ap-southeast-1b,10.1.11.0/24,"Fargate TMS, Lambda"
+Private-Subnet-3,Private,ap-southeast-1c,10.1.12.0/24,"Fargate TMS, Lambda"

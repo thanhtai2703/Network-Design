@@ -1,0 +1,5 @@
+VPC-DR Data (Hà Nội),,,,
+Dải mạng tổng: 10.20.0.0/16,,,,
+Tên Subnet,Loại Subnet,Availability Zone (AZ),Dải IP (CIDR),Chức năng
+DR-Data-Priv-1,Private,ap-northeast-1a,10.20.1.0/24,Aurora Replica
+DR-Data-Priv-2,Private,ap-southeast-1c,10.20.2.0/24,Aurora Replica
