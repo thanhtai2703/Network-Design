@@ -1,0 +1,5 @@
+VPC Security & Management (TP. HCM),,,,
+Dải mạng tổng: 10.3.0.0/16,,,,
+Tên Subnet,Loại Subnet,Availability Zone (AZ),Dải IP (CIDR),Chức năng
+Mgmt-Public-1,Public,ap-southeast-1a,10.3.1.0/24,Bastion Host 1
+Mgmt-Public-2,Public,ap-southeast-1b,10.3.2.0/24,Bastion Host 2

@@ -41,7 +41,7 @@ resource "aws_subnet" "private" {
 
 # 5. NAT Gateways (Để Private Subnet ra internet tải image)
 resource "aws_eip" "nat" {
-  count = 3
+  count  = 3
   domain = "vpc"
   tags   = { Name = "EIP-NAT-AZ${count.index + 1}" }
 }
@@ -51,7 +51,7 @@ resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   tags          = { Name = "NAT-GW-AZ${count.index + 1}" }
-  depends_on = [aws_internet_gateway.igw]
+  depends_on    = [aws_internet_gateway.igw]
 }
 
 # 6. Route Tables

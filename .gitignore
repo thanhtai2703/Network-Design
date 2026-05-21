@@ -1,0 +1,71 @@
+# ============================================================
+# Terraform
+# ============================================================
+
+# Provider plugins and modules (can be hundreds of MB)
+.terraform/
+**/.terraform/
+
+# State files (may contain secrets, can be very large)
+*.tfstate
+*.tfstate.*
+
+# Binary plan files
+*.tfplan
+*.tfplan.*
+
+# Variable files with real values (may contain secrets)
+# Keep terraform.tfvars.example committed if used
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Personal CLI overrides
+.terraformrc
+terraform.rc
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Keep the lock file committed for reproducible builds
+# (do NOT add .terraform.lock.hcl here)
+
+# ============================================================
+# Secrets and keys
+# ============================================================
+*.pem
+*.key
+*.ppk
+*.pfx
+.env
+.env.*
+!.env.example
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ============================================================
+# Editors / IDEs
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================
+# Logs and temp
+# ============================================================
+*.log
+*.tmp
+*.bak

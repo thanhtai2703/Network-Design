@@ -1,0 +1,6 @@
+VPC Data Layer — Lớp dữ liệu (TP. HCM),,,,
+Dải mạng tổng: 10.2.0.0/16,,,,
+Tên Subnet,Loại Subnet,Availability Zone (AZ),Dải IP (CIDR),Chức năng
+Data-Private-1,Private,ap-southeast-1a,10.2.1.0/24,"Aurora Primary, Redis"
+Data-Private-2,Private,ap-southeast-1b,10.2.2.0/24,"Aurora Standby, Redis"
+Data-Private-3,Private,ap-southeast-1c,10.2.3.0/24,"Aurora Standby, Redis"
