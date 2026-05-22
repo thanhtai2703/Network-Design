@@ -28,3 +28,36 @@ variable "admin_ssh_cidrs" {
   type        = list(string)
   default     = []
 }
+
+variable "bastion_instance_type" {
+  description = "EC2 instance type for Bastion hosts"
+  type        = string
+  default     = "t3.micro"
+}
+
+# =============================================================================
+# Part 3B - VPN and offices
+# =============================================================================
+
+variable "offices" {
+  description = "Map of remote offices that connect via S2S VPN. Key is the office short name (used in resource names)."
+  type = map(object({
+    cidr = string
+  }))
+  default = {
+    danang = { cidr = "10.100.0.0/16" }
+    hanoi  = { cidr = "10.101.0.0/16" }
+  }
+}
+
+variable "cgw_instance_type" {
+  description = "EC2 instance type for CGW simulators (strongSwan)"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "client_vpn_cidr_block" {
+  description = "CIDR for AWS Client VPN to assign to connecting clients (must be >= /22, must not overlap with internal CIDRs)"
+  type        = string
+  default     = "10.200.0.0/22"
+}

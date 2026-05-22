@@ -18,6 +18,16 @@ output "private_subnet_cidrs" {
   value       = aws_subnet.private[*].cidr_block
 }
 
+output "private_route_table_ids" {
+  description = "Private route table IDs (one per AZ) for TGW cross-VPC routes"
+  value       = aws_route_table.private[*].id
+}
+
+output "public_route_table_id" {
+  description = "Public route table ID"
+  value       = aws_route_table.public.id
+}
+
 output "nat_gateway_ips" {
   description = "Public IPs of NAT Gateways"
   value       = aws_eip.nat[*].public_ip
