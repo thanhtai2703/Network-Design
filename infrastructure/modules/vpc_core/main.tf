@@ -72,6 +72,12 @@ resource "aws_route_table" "private" {
     nat_gateway_id = aws_nat_gateway.nat[count.index].id
   }
   tags = { Name = "Private-RT-AZ${count.index + 1}" }
+
+  # transit_gateway module adds 10.0.0.0/8 -> TGW via separate aws_route resource.
+  # Without ignore_changes, this route table would try to remove that route every plan.
+  lifecycle {
+    ignore_changes = [route]
+  }
 }
 
 # 7. Route Table Associations

@@ -40,6 +40,11 @@ resource "aws_route_table" "public" {
   }
 
   tags = { Name = "Mgmt-Public-RT" }
+
+  # transit_gateway module adds 10.0.0.0/8 -> TGW via separate aws_route resource.
+  lifecycle {
+    ignore_changes = [route]
+  }
 }
 
 # 5. Associate Route Table cho 2 Public Subnets
