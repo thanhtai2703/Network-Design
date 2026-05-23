@@ -13,11 +13,27 @@ terraform {
       source  = "hashicorp/local"
       version = ">= 2.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = ">= 2.0"
+    }
   }
 }
 
 provider "aws" {
   region = var.aws_region
+}
+
+# Required for CLOUDFRONT-scope WAF (must live in us-east-1).
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
+# DR region (Phase 5).
+provider "aws" {
+  alias  = "dr"
+  region = var.dr_aws_region
 }
 
 # =============================================================================
@@ -151,6 +167,71 @@ module "office_vpn" {
   transit_gateway_id = module.transit_gateway.tgw_id
   tgw_route_table_id = module.transit_gateway.tgw_default_route_table_id
   cgw_instance_type  = var.cgw_instance_type
+}
+
+# =============================================================================
+# DR Region (Phase 5A) - VPC Core/Data DR + TGW DR + inter-region peering
+# =============================================================================
+module "dr_region" {
+  source       = "./modules/dr_region"
+  project_name = var.project_name
+
+  primary_tgw_id     = module.transit_gateway.tgw_id
+  primary_aws_region = var.aws_region
+  dr_aws_region      = var.dr_aws_region
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+# =============================================================================
+# Edge (Phase 4D) - CloudFront + WAF fronting the ALB
+# =============================================================================
+module "edge" {
+  source       = "./modules/edge"
+  project_name = var.project_name
+  alb_dns_name = module.app_fargate.alb_dns_name
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+
+# =============================================================================
+# API Gateway + Lambda + SQS (Phase 4C) - driver mobile endpoint (Y9)
+# =============================================================================
+module "api_lambda" {
+  source       = "./modules/api_lambda"
+  project_name = var.project_name
+}
+
+# =============================================================================
+# Aurora (Phase 4B) - 1 Writer + 2 Reader across 3 AZ in VPC Data
+# =============================================================================
+module "database" {
+  source       = "./modules/database"
+  project_name = var.project_name
+
+  db_subnet_group_name = module.vpc_data.db_subnet_group_name
+  security_group_id    = module.security_groups.sg_aurora_id
+}
+
+# =============================================================================
+# App Fargate (Phase 4A) - Nginx "Hello VietMove" + ALB
+# =============================================================================
+module "app_fargate" {
+  source       = "./modules/app_fargate"
+  project_name = var.project_name
+
+  vpc_id             = module.vpc_core.vpc_id
+  public_subnet_ids  = module.vpc_core.public_subnet_ids
+  private_subnet_ids = module.vpc_core.private_subnet_ids
+
+  alb_security_group_id     = module.security_groups.sg_alb_id
+  fargate_security_group_id = module.security_groups.sg_fargate_id
 }
 
 # =============================================================================

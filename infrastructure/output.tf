@@ -133,3 +133,114 @@ output "client_vpn_ovpn_file" {
   description = "Path to the .ovpn file - import into AWS VPN Client"
   value       = module.client_vpn.ovpn_file_path
 }
+
+# ---------------------------------------------------------------------------
+# App Fargate (4A)
+# ---------------------------------------------------------------------------
+output "alb_dns_name" {
+  description = "Open this in a browser to see the VietMove TMS page"
+  value       = module.app_fargate.alb_dns_name
+}
+
+output "alb_url" {
+  value = "http://${module.app_fargate.alb_dns_name}"
+}
+
+# ---------------------------------------------------------------------------
+# Aurora (4B)
+# ---------------------------------------------------------------------------
+output "aurora_writer_endpoint" {
+  value = module.database.writer_endpoint
+}
+
+output "aurora_reader_endpoint" {
+  value = module.database.reader_endpoint
+}
+
+output "aurora_database_name" {
+  value = module.database.database_name
+}
+
+output "aurora_master_username" {
+  value = module.database.master_username
+}
+
+output "aurora_master_secret_arn" {
+  description = "Secrets Manager ARN - aws secretsmanager get-secret-value --secret-id <arn>"
+  value       = module.database.master_user_secret_arn
+}
+
+output "aurora_port" {
+  value = module.database.port
+}
+
+# ---------------------------------------------------------------------------
+# API Gateway + Lambda + SQS (4C)
+# ---------------------------------------------------------------------------
+output "api_post_order_url" {
+  description = "curl -X POST <this-url> -d '{...}'"
+  value       = module.api_lambda.post_order_url
+}
+
+output "sqs_queue_url" {
+  value = module.api_lambda.queue_url
+}
+
+output "sqs_queue_name" {
+  value = module.api_lambda.queue_name
+}
+
+output "lambda_function_name" {
+  value = module.api_lambda.lambda_function_name
+}
+
+# ---------------------------------------------------------------------------
+# Edge (4D)
+# ---------------------------------------------------------------------------
+output "cloudfront_url" {
+  description = "Open this in browser — HTTPS edge with WAF"
+  value       = module.edge.cloudfront_url
+}
+
+output "cloudfront_domain" {
+  value = module.edge.cloudfront_domain
+}
+
+output "waf_web_acl_id" {
+  value = module.edge.waf_web_acl_id
+}
+
+# ---------------------------------------------------------------------------
+# DR Region (5A)
+# ---------------------------------------------------------------------------
+output "dr_vpc_core_id" {
+  value = module.dr_region.vpc_core_dr_id
+}
+
+output "dr_vpc_data_id" {
+  value = module.dr_region.vpc_data_dr_id
+}
+
+output "dr_vpc_core_public_subnets" {
+  value = module.dr_region.vpc_core_dr_public_subnet_ids
+}
+
+output "dr_vpc_core_private_subnets" {
+  value = module.dr_region.vpc_core_dr_private_subnet_ids
+}
+
+output "dr_vpc_data_private_subnets" {
+  value = module.dr_region.vpc_data_dr_private_subnet_ids
+}
+
+output "dr_tgw_id" {
+  value = module.dr_region.tgw_dr_id
+}
+
+output "dr_db_subnet_group" {
+  value = module.dr_region.vpc_data_dr_db_subnet_group
+}
+
+output "dr_nat_public_ip" {
+  value = module.dr_region.nat_dr_public_ip
+}

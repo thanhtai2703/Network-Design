@@ -72,8 +72,8 @@ resource "aws_vpc_security_group_egress_rule" "fargate_to_aurora" {
   for_each          = toset(var.vpc_data_private_cidrs)
   security_group_id = aws_security_group.fargate.id
   cidr_ipv4         = each.value
-  from_port         = 3306
-  to_port           = 3306
+  from_port         = 5432
+  to_port           = 5432
   ip_protocol       = "tcp"
   description       = "Fargate to Aurora (cross-VPC via TGW)"
 }
@@ -113,8 +113,8 @@ resource "aws_vpc_security_group_egress_rule" "lambda_to_aurora" {
   for_each          = toset(var.vpc_data_private_cidrs)
   security_group_id = aws_security_group.lambda.id
   cidr_ipv4         = each.value
-  from_port         = 3306
-  to_port           = 3306
+  from_port         = 5432
+  to_port           = 5432
   ip_protocol       = "tcp"
   description       = "Lambda to Aurora"
 }
@@ -183,7 +183,7 @@ resource "aws_vpc_security_group_ingress_rule" "vpce_core_https" {
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "aurora" {
   name        = "${var.project_name}-sg-aurora"
-  description = "Aurora cluster, accept MySQL from Fargate, Lambda, Bastion"
+  description = "Aurora cluster, accept PostgreSQL from Fargate, Lambda, Bastion"
   vpc_id      = var.vpc_data_id
 
   tags = { Name = "${var.project_name}-sg-aurora" }
@@ -193,8 +193,8 @@ resource "aws_vpc_security_group_ingress_rule" "aurora_from_core" {
   for_each          = toset(var.vpc_core_private_cidrs)
   security_group_id = aws_security_group.aurora.id
   cidr_ipv4         = each.value
-  from_port         = 3306
-  to_port           = 3306
+  from_port         = 5432
+  to_port           = 5432
   ip_protocol       = "tcp"
   description       = "From VPC Core private (Fargate + Lambda)"
 }
@@ -203,8 +203,8 @@ resource "aws_vpc_security_group_ingress_rule" "aurora_from_bastion" {
   for_each          = toset(var.vpc_mgmt_public_cidrs)
   security_group_id = aws_security_group.aurora.id
   cidr_ipv4         = each.value
-  from_port         = 3306
-  to_port           = 3306
+  from_port         = 5432
+  to_port           = 5432
   ip_protocol       = "tcp"
   description       = "From Bastion (admin)"
 }
@@ -305,8 +305,8 @@ resource "aws_vpc_security_group_egress_rule" "bastion_to_data_ssh" {
 resource "aws_vpc_security_group_egress_rule" "bastion_to_aurora" {
   security_group_id = aws_security_group.bastion.id
   cidr_ipv4         = var.vpc_data_cidr
-  from_port         = 3306
-  to_port           = 3306
+  from_port         = 5432
+  to_port           = 5432
   ip_protocol       = "tcp"
   description       = "Admin to Aurora"
 }
