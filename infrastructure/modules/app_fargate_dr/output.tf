@@ -1,15 +1,10 @@
 output "alb_dns_name" {
-  description = "ALB public DNS - curl this to see the web page"
+  description = "DR ALB DNS - direct access (CloudFront uses this as fallback origin)"
   value       = aws_lb.main.dns_name
 }
 
 output "alb_arn" {
   value = aws_lb.main.arn
-}
-
-output "alb_arn_suffix" {
-  description = "ALB ARN suffix - the part after :loadbalancer/. Used as CloudWatch dimension."
-  value       = aws_lb.main.arn_suffix
 }
 
 output "ecs_cluster_name" {

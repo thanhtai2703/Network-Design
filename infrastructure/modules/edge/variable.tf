@@ -3,8 +3,14 @@ variable "project_name" {
 }
 
 variable "alb_dns_name" {
-  description = "ALB DNS name from app_fargate module (used as CloudFront origin)"
+  description = "Primary ALB DNS (CloudFront primary origin)"
   type        = string
+}
+
+variable "alb_dr_dns_name" {
+  description = "DR ALB DNS (CloudFront secondary origin for failover). Empty string = no failover."
+  type        = string
+  default     = ""
 }
 
 variable "waf_rate_limit" {

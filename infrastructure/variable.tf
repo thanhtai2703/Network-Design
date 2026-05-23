@@ -66,3 +66,13 @@ variable "client_vpn_cidr_block" {
   type        = string
   default     = "10.200.0.0/22"
 }
+
+# =============================================================================
+# Phase 5D - Monitoring
+# =============================================================================
+
+variable "notification_email" {
+  description = "Email to receive CloudWatch alarm notifications (Phase 5D). AWS will send a confirmation link after apply - must be clicked."
+  type        = string
+  default     = "23521380@gm.uit.edu.vn"
+}

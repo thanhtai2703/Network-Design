@@ -244,3 +244,46 @@ output "dr_db_subnet_group" {
 output "dr_nat_public_ip" {
   value = module.dr_region.nat_dr_public_ip
 }
+
+# ---------------------------------------------------------------------------
+# DR Database (5B)
+# ---------------------------------------------------------------------------
+output "dr_rds_endpoint" {
+  description = "DR read replica endpoint (ap-southeast-2)"
+  value       = module.database_dr.replica_endpoint
+}
+
+output "dr_rds_id" {
+  value = module.database_dr.replica_id
+}
+
+# ---------------------------------------------------------------------------
+# DR App (5C)
+# ---------------------------------------------------------------------------
+output "dr_alb_dns_name" {
+  description = "DR ALB DNS (direct access to standby region)"
+  value       = module.app_fargate_dr.alb_dns_name
+}
+
+output "dr_alb_url" {
+  value = "http://${module.app_fargate_dr.alb_dns_name}"
+}
+
+# ---------------------------------------------------------------------------
+# Monitoring (5D)
+# ---------------------------------------------------------------------------
+output "monitoring_s3_bucket" {
+  value = module.monitoring.s3_logs_bucket
+}
+
+output "monitoring_cloudtrail" {
+  value = module.monitoring.cloudtrail_name
+}
+
+output "monitoring_sns_topic" {
+  value = module.monitoring.sns_topic_arn
+}
+
+output "monitoring_dashboard_url" {
+  value = module.monitoring.dashboard_url
+}

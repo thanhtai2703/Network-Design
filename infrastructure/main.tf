@@ -17,6 +17,10 @@ terraform {
       source  = "hashicorp/archive"
       version = ">= 2.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = ">= 3.0"
+    }
   }
 }
 
@@ -170,6 +174,22 @@ module "office_vpn" {
 }
 
 # =============================================================================
+# Monitoring (Phase 5D) - CloudTrail + S3 + SNS + CloudWatch alarms + dashboard
+# =============================================================================
+module "monitoring" {
+  source             = "./modules/monitoring"
+  project_name       = var.project_name
+  notification_email = var.notification_email
+  aws_region         = var.aws_region
+
+  alb_arn_suffix     = module.app_fargate.alb_arn_suffix
+  ecs_cluster_name   = module.app_fargate.ecs_cluster_name
+  ecs_service_name   = module.app_fargate.ecs_service_name
+  rds_instance_id    = module.database.db_instance_id
+  rds_dr_instance_id = module.database_dr.replica_id
+}
+
+# =============================================================================
 # DR Region (Phase 5A) - VPC Core/Data DR + TGW DR + inter-region peering
 # =============================================================================
 module "dr_region" {
@@ -187,12 +207,47 @@ module "dr_region" {
 }
 
 # =============================================================================
-# Edge (Phase 4D) - CloudFront + WAF fronting the ALB
+# DR Database (Phase 5B) - cross-region read replica of primary RDS
+# =============================================================================
+module "database_dr" {
+  source       = "./modules/database_dr"
+  project_name = var.project_name
+
+  source_db_arn        = module.database.db_instance_arn
+  vpc_data_dr_id       = module.dr_region.vpc_data_dr_id
+  db_subnet_group_name = module.dr_region.vpc_data_dr_db_subnet_group
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+# =============================================================================
+# App Fargate DR (Phase 5C) - standby Fargate + ALB in DR region
+# =============================================================================
+module "app_fargate_dr" {
+  source       = "./modules/app_fargate_dr"
+  project_name = var.project_name
+
+  vpc_id             = module.dr_region.vpc_core_dr_id
+  public_subnet_ids  = module.dr_region.vpc_core_dr_public_subnet_ids
+  private_subnet_ids = module.dr_region.vpc_core_dr_private_subnet_ids
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+# =============================================================================
+# Edge (Phase 4D + 5C) - CloudFront + WAF + Origin Group failover to DR
 # =============================================================================
 module "edge" {
-  source       = "./modules/edge"
-  project_name = var.project_name
-  alb_dns_name = module.app_fargate.alb_dns_name
+  source          = "./modules/edge"
+  project_name    = var.project_name
+  alb_dns_name    = module.app_fargate.alb_dns_name
+  alb_dr_dns_name = module.app_fargate_dr.alb_dns_name # enables origin group failover
 
   providers = {
     aws           = aws

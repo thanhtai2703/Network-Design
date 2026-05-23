@@ -238,20 +238,29 @@ resource "aws_ec2_transit_gateway_route" "primary_to_dr_core" {
   destination_cidr_block         = var.vpc_core_dr_cidr
   transit_gateway_route_table_id = data.aws_ec2_transit_gateway.primary.association_default_route_table_id
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_peering_attachment_accepter.primary_accept.id
+
+  depends_on = [aws_ec2_transit_gateway_peering_attachment_accepter.primary_accept]
 }
 
 resource "aws_ec2_transit_gateway_route" "primary_to_dr_data" {
   destination_cidr_block         = var.vpc_data_dr_cidr
   transit_gateway_route_table_id = data.aws_ec2_transit_gateway.primary.association_default_route_table_id
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_peering_attachment_accepter.primary_accept.id
+
+  depends_on = [aws_ec2_transit_gateway_peering_attachment_accepter.primary_accept]
 }
 
 # DR TGW default RT: route Primary CIDRs -> peering
+# IMPORTANT: depend on the ACCEPTER (not just the requester). The DR-side
+# attachment is in pendingAcceptance until primary accepts, and creating
+# routes against it fails with "invalid state".
 resource "aws_ec2_transit_gateway_route" "dr_to_primary_all" {
   provider                       = aws.dr
   destination_cidr_block         = "10.0.0.0/8"
   transit_gateway_route_table_id = aws_ec2_transit_gateway.dr.association_default_route_table_id
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_peering_attachment.dr_to_primary.id
+
+  depends_on = [aws_ec2_transit_gateway_peering_attachment_accepter.primary_accept]
 }
 
 # (Note: this DR-side 10/8 route would conflict with DR VPC CIDRs (10.11, 10.12)
