@@ -2,6 +2,11 @@ output "db_instance_id" {
   value = aws_db_instance.main.id
 }
 
+output "db_instance_arn" {
+  description = "ARN of the primary DB instance (used as source for cross-region read replica in 5B)"
+  value       = aws_db_instance.main.arn
+}
+
 output "writer_endpoint" {
   description = "DB endpoint (single instance — same endpoint for read and write)"
   value       = aws_db_instance.main.address
@@ -24,7 +29,7 @@ output "master_username" {
 
 output "master_user_secret_arn" {
   description = "Secrets Manager ARN with master password (JSON: {username, password})"
-  value       = aws_db_instance.main.master_user_secret[0].secret_arn
+  value       = aws_secretsmanager_secret.master.arn
 }
 
 output "port" {

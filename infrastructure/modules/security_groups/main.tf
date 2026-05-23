@@ -329,6 +329,16 @@ resource "aws_vpc_security_group_egress_rule" "bastion_to_internet_https" {
   description       = "yum update, AWS API"
 }
 
+# Phase 5B - DR replica access (port 5432 to VPC Data DR via TGW peering).
+resource "aws_vpc_security_group_egress_rule" "bastion_to_dr_data" {
+  security_group_id = aws_security_group.bastion.id
+  cidr_ipv4         = "10.12.0.0/16"
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  description       = "Bastion to RDS DR (cross-region via TGW peering)"
+}
+
 
 # -----------------------------------------------------------------------------
 # 10. sg-vpc-endpoint-mgmt (VPC Mgmt)
