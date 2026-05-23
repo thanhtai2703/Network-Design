@@ -1,6 +1,11 @@
 variable "aws_region" {
-  description = "AWS Region for HQ"
+  description = "Primary AWS Region for HQ"
   default     = "ap-southeast-1"
+}
+
+variable "dr_aws_region" {
+  description = "DR AWS Region (Phase 5)"
+  default     = "ap-southeast-2"
 }
 
 variable "project_name" {

@@ -108,6 +108,20 @@ resource "aws_acm_certificate" "server" {
 
 
 # ---------------------------------------------------------------------------
+# 4b. CloudWatch log group for connection events (auth failures, disconnects)
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "client_vpn" {
+  name              = "/aws/clientvpn/${var.project_name}"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_stream" "client_vpn" {
+  name           = "connection-log"
+  log_group_name = aws_cloudwatch_log_group.client_vpn.name
+}
+
+
+# ---------------------------------------------------------------------------
 # 5. Client VPN Endpoint
 # ---------------------------------------------------------------------------
 resource "aws_ec2_client_vpn_endpoint" "main" {
@@ -121,7 +135,9 @@ resource "aws_ec2_client_vpn_endpoint" "main" {
   }
 
   connection_log_options {
-    enabled = false
+    enabled               = true
+    cloudwatch_log_group  = aws_cloudwatch_log_group.client_vpn.name
+    cloudwatch_log_stream = aws_cloudwatch_log_stream.client_vpn.name
   }
 
   vpc_id             = var.vpc_id
@@ -191,7 +207,10 @@ resource "aws_ec2_client_vpn_route" "cross_vpc" {
 resource "local_sensitive_file" "client_ovpn" {
   filename = "${path.root}/output/${var.project_name}-admin.ovpn"
   content = templatefile("${path.module}/templates/client.ovpn.tftpl", {
-    endpoint_dns = aws_ec2_client_vpn_endpoint.main.dns_name
+    # AWS trả về dns_name kèm prefix "*." (vd "*.cvpn-endpoint-xxx...").
+    # Phải strip "*." trước khi render vào .ovpn — nếu không, client sẽ prepend
+    # random-hostname vào "*." → ra "<rand>.*.cvpn-..." → DNS resolve fail.
+    endpoint_dns = replace(aws_ec2_client_vpn_endpoint.main.dns_name, "*.", "")
     ca_cert      = tls_self_signed_cert.ca.cert_pem
     client_cert  = tls_locally_signed_cert.client_admin.cert_pem
     client_key   = tls_private_key.client_admin.private_key_pem
