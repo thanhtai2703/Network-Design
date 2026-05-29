@@ -2,8 +2,8 @@ variable "project_name" {
   type = string
 }
 
-variable "source_db_arn" {
-  description = "ARN of the primary RDS instance to replicate from (cross-region ARN)"
+variable "global_cluster_id" {
+  description = "Aurora Global Database identifier from the primary `database` module - this secondary cluster joins it"
   type        = string
 }
 
@@ -23,9 +23,28 @@ variable "db_subnet_group_name" {
   type        = string
 }
 
+variable "engine" {
+  description = "Must match the global cluster engine"
+  type        = string
+  default     = "aurora-postgresql"
+}
+
+variable "engine_version" {
+  description = "Must match the global cluster engine version"
+  type        = string
+  default     = "16.4"
+}
+
 variable "instance_class" {
-  type    = string
-  default = "db.t3.micro"
+  description = "Aurora instance class for the DR cluster. Aurora Global Database does NOT support burstable (t3/t4g) classes - use db.r5.large / db.r6g.large. Must match the primary's family."
+  type        = string
+  default     = "db.r6g.large"
+}
+
+variable "instance_count" {
+  description = "Number of read instances in the DR secondary cluster"
+  type        = number
+  default     = 1
 }
 
 variable "port" {

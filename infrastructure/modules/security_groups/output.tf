@@ -28,11 +28,6 @@ output "sg_aurora_id" {
   value       = aws_security_group.aurora.id
 }
 
-output "sg_redis_id" {
-  description = "ID of sg-redis"
-  value       = aws_security_group.redis.id
-}
-
 output "sg_vpc_endpoint_data_id" {
   description = "ID of SG for VPC Endpoint in Data"
   value       = aws_security_group.vpc_endpoint_data.id

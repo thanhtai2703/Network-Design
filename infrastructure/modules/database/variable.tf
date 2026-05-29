@@ -13,13 +13,15 @@ variable "security_group_id" {
 }
 
 variable "engine" {
-  type    = string
-  default = "postgres"
+  description = "Aurora engine. Must be aurora-postgresql for an Aurora cluster."
+  type        = string
+  default     = "aurora-postgresql"
 }
 
 variable "engine_version" {
-  type    = string
-  default = "17.10"
+  description = "Aurora PostgreSQL engine version (NOT the same as RDS PostgreSQL versions). Check: aws rds describe-db-engine-versions --engine aurora-postgresql"
+  type        = string
+  default     = "16.4"
 }
 
 variable "port" {
@@ -28,20 +30,15 @@ variable "port" {
 }
 
 variable "instance_class" {
-  description = "RDS instance class. Free tier supports db.t3.micro / db.t4g.micro."
+  description = "Aurora instance class. Aurora Global Database does NOT support burstable (t3/t4g) classes - smallest valid class is db.r5.large (or db.r6g.large on Graviton)."
   type        = string
-  default     = "db.t3.micro"
+  default     = "db.r6g.large"
 }
 
-variable "allocated_storage" {
-  description = "Storage size in GB. Free tier allows up to 20 GB."
+variable "instance_count" {
+  description = "Number of cluster instances (1 Writer + the rest Readers). 3 = 1 writer + 2 readers across 3 AZ."
   type        = number
-  default     = 20
-}
-
-variable "storage_type" {
-  type    = string
-  default = "gp3"
+  default     = 3
 }
 
 variable "database_name" {

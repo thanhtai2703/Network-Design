@@ -1,10 +1,15 @@
 # =============================================================================
-# 5B - RDS PostgreSQL cross-region read replica
+# 5B - Aurora PostgreSQL cross-region SECONDARY cluster (Aurora Global Database)
 # =============================================================================
-# - Source: primary RDS in ap-southeast-1 (vietmove-postgres)
-# - Replica: this module creates an instance in ap-southeast-2
-# - Replication is async (typical lag <2s)
-# - To failover: aws rds promote-read-replica --db-instance-identifier <id>
+# - Joins the global cluster created in the `database` module (primary region)
+# - Async physical replication managed by Aurora (typical lag <1s)
+# - Read-only until promoted. Failover (managed):
+#     aws rds failover-global-cluster \
+#       --global-cluster-identifier vietmove-aurora-global \
+#       --target-db-cluster-identifier <this cluster ARN>
+#
+# Replaces the previous single-instance RDS read replica. Aurora cross-region
+# replication is done via Global Database, NOT replicate_source_db.
 # =============================================================================
 
 terraform {
@@ -16,9 +21,8 @@ terraform {
   }
 }
 
-# AWS-managed KMS key for RDS in DR region. Used to encrypt the cross-region
-# replica - cross-region replicas MUST specify a key in the destination region
-# (the source key in the primary region is not reachable).
+# AWS-managed KMS key for RDS in the DR region. A cross-region Aurora secondary
+# must encrypt with a key in its OWN region (the primary's key is not reachable).
 data "aws_kms_alias" "rds_dr" {
   provider = aws.dr
   name     = "alias/aws/rds"
@@ -26,17 +30,17 @@ data "aws_kms_alias" "rds_dr" {
 
 
 # -----------------------------------------------------------------------------
-# 1. Security Group for DR replica
+# 1. Security Group for the DR cluster
 # Allow :5432 from any internal CIDR (10/8) - reached via TGW peering from
-# primary VPCs or from DR VPC Core (future Fargate DR).
+# primary VPCs or from DR VPC Core (Fargate DR).
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "rds_dr" {
   provider    = aws.dr
-  name        = "${var.project_name}-sg-rds-dr"
-  description = "RDS read replica in DR region, accept PostgreSQL from internal"
+  name        = "${var.project_name}-sg-aurora-dr"
+  description = "Aurora secondary in DR region, accept PostgreSQL from internal"
   vpc_id      = var.vpc_data_dr_id
 
-  tags = { Name = "${var.project_name}-sg-rds-dr" }
+  tags = { Name = "${var.project_name}-sg-aurora-dr" }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_dr_pg" {
@@ -51,35 +55,54 @@ resource "aws_vpc_security_group_ingress_rule" "rds_dr_pg" {
 
 
 # -----------------------------------------------------------------------------
-# 2. Read replica instance
-# Cross-region replica via replicate_source_db = source ARN
+# 2. Secondary Aurora cluster (DR region) joined to the global cluster
+# No master credentials / database_name here - inherited from the global cluster.
 # -----------------------------------------------------------------------------
-resource "aws_db_instance" "replica" {
-  provider   = aws.dr
-  identifier = "${lower(var.project_name)}-postgres-dr"
+resource "aws_rds_cluster" "dr" {
+  provider                  = aws.dr
+  cluster_identifier        = "${lower(var.project_name)}-aurora-dr"
+  global_cluster_identifier = var.global_cluster_id
 
-  # Replicate from primary - all engine/version/storage settings inherited from source
-  replicate_source_db = var.source_db_arn
-
-  instance_class = var.instance_class
+  engine         = var.engine
+  engine_version = var.engine_version
 
   db_subnet_group_name   = var.db_subnet_group_name
   vpc_security_group_ids = [aws_security_group.rds_dr.id]
-  publicly_accessible    = false
-  multi_az               = false
+  storage_encrypted      = true
+  kms_key_id             = data.aws_kms_alias.rds_dr.target_key_arn
 
-  # Required > 0 so this replica could be promoted in future
+  # Required >= 1 (Aurora minimum). Lets this cluster be promoted later.
   backup_retention_period = 1
-
-  # Cross-region replica from an encrypted source MUST set kms_key_id to a key
-  # in the DESTINATION region. Using the AWS-managed RDS key (free, simplest).
-  kms_key_id = data.aws_kms_alias.rds_dr.target_key_arn
 
   skip_final_snapshot = true
   apply_immediately   = true
   deletion_protection = false
 
+  # The primary cluster owns the global membership; on a managed failover the
+  # roles swap. Ignore so Terraform doesn't fight Aurora over who is primary.
+  lifecycle {
+    ignore_changes = [global_cluster_identifier, replication_source_identifier]
+  }
+}
+
+
+# -----------------------------------------------------------------------------
+# 3. At least one instance in the secondary cluster (the read node)
+# -----------------------------------------------------------------------------
+resource "aws_rds_cluster_instance" "dr" {
+  provider           = aws.dr
+  count              = var.instance_count
+  identifier         = "${lower(var.project_name)}-aurora-dr-${count.index + 1}"
+  cluster_identifier = aws_rds_cluster.dr.id
+
+  instance_class = var.instance_class
+  engine         = aws_rds_cluster.dr.engine
+  engine_version = aws_rds_cluster.dr.engine_version
+
+  db_subnet_group_name = var.db_subnet_group_name
+  publicly_accessible  = false
+
   performance_insights_enabled = false
 
-  tags = { Name = "${var.project_name}-RDS-Postgres-DR" }
+  tags = { Name = "${var.project_name}-Aurora-DR-${count.index + 1}" }
 }

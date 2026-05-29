@@ -15,6 +15,8 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_region" "current" {}
+
 # Latest Amazon Linux 2023 AMI for CGW and workstation test hosts.
 # AL2023 has a reliable systemd-based SSM Agent path, matching the Bastion hosts.
 data "aws_ami" "al2023" {
@@ -79,10 +81,31 @@ resource "aws_route_table_association" "office_public" {
   route_table_id = aws_route_table.office_public.id
 }
 
-# Private RT: 0.0.0.0/0 via IGW for general Internet (yum), 10.0.0.0/8 via CGW EC2
+# NAT Gateway for office private subnet (so workstation can reach SSM endpoint,
+# yum repos, etc - same way a real office network reaches the Internet via NAT).
+resource "aws_eip" "office_nat" {
+  domain = "vpc"
+  tags   = { Name = "${var.project_name}-Office-${var.office_name}-NAT-EIP" }
+}
+
+resource "aws_nat_gateway" "office" {
+  allocation_id = aws_eip.office_nat.id
+  subnet_id     = aws_subnet.office_public.id
+  tags          = { Name = "${var.project_name}-Office-${var.office_name}-NAT" }
+  depends_on    = [aws_internet_gateway.office]
+}
+
+# Private RT: 0.0.0.0/0 -> NAT (Internet via office's own network),
+#             10.0.0.0/8 -> CGW EC2 (AWS internal via VPN tunnel).
 resource "aws_route_table" "office_private" {
   vpc_id = aws_vpc.office.id
-  tags   = { Name = "Office-${var.office_name}-Private-RT" }
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.office.id
+  }
+
+  tags = { Name = "Office-${var.office_name}-Private-RT" }
 }
 
 resource "aws_route" "office_private_to_aws" {
@@ -318,6 +341,35 @@ resource "aws_instance" "workstation" {
     http_endpoint = "enabled"
     http_tokens   = "required"
   }
+
+  # Bootstrap: ensure SSM agent is running. AL2023 ships with amazon-ssm-agent
+  # but it can fail to register on first boot if NAT GW / route table aren't
+  # ready yet. Restarting after cloud-init guarantees a fresh registration
+  # attempt against a working network path.
+  user_data                   = <<-EOT
+    #!/bin/bash
+    set -eux
+    # Wait until default gateway responds (NAT GW reachable)
+    for i in $(seq 1 30); do
+      if curl -s --max-time 5 https://ssm.${data.aws_region.current.region}.amazonaws.com > /dev/null; then
+        break
+      fi
+      sleep 10
+    done
+    systemctl enable --now amazon-ssm-agent
+    systemctl restart amazon-ssm-agent
+  EOT
+  user_data_replace_on_change = true
+
+  # Network path to SSM endpoint must be ready BEFORE this instance boots:
+  #   workstation -> office_private RT -> NAT GW -> IGW -> SSM endpoint
+  # Without this, the SSM agent's first registration attempt happens before
+  # the route to NAT GW exists, hits long backoff, and never recovers.
+  depends_on = [
+    aws_route_table_association.office_private,
+    aws_nat_gateway.office,
+    aws_iam_role_policy_attachment.ssm_core,
+  ]
 
   tags = { Name = "${var.project_name}-Workstation-${var.office_name}" }
 }
