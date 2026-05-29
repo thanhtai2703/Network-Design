@@ -158,10 +158,10 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
   alarm_actions = [aws_sns_topic.alarms.arn]
 }
 
-# Alarm 3: RDS CPU > 80%
+# Alarm 3: Aurora primary cluster CPU > 80%
 resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
-  alarm_name          = "${var.project_name}-RDS-CPU-High"
-  alarm_description   = "RDS primary CPU > 80% for 5 minutes"
+  alarm_name          = "${var.project_name}-Aurora-CPU-High"
+  alarm_description   = "Aurora primary cluster CPU > 80% for 5 minutes"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 5
   metric_name         = "CPUUtilization"
@@ -171,28 +171,31 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
   threshold           = 80
   treat_missing_data  = "notBreaching"
 
+  # Aurora metrics are keyed by DBClusterIdentifier (not DBInstanceIdentifier).
   dimensions = {
-    DBInstanceIdentifier = var.rds_instance_id
+    DBClusterIdentifier = var.rds_instance_id
   }
 
   alarm_actions = [aws_sns_topic.alarms.arn]
 }
 
-# Alarm 4: RDS DR replica lag > 60s
+# Alarm 4: Aurora Global Database cross-region replication lag > 60s
+# AuroraGlobalDBReplicationLag is reported in MILLISECONDS on the secondary
+# cluster, so the 60s threshold is 60000 ms.
 resource "aws_cloudwatch_metric_alarm" "rds_dr_lag" {
-  alarm_name          = "${var.project_name}-RDS-DR-Replica-Lag-High"
-  alarm_description   = "DR replica lag > 60 seconds"
+  alarm_name          = "${var.project_name}-Aurora-DR-Replication-Lag-High"
+  alarm_description   = "Aurora Global DB cross-region replication lag > 60s"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
-  metric_name         = "ReplicaLag"
+  metric_name         = "AuroraGlobalDBReplicationLag"
   namespace           = "AWS/RDS"
   period              = 60
   statistic           = "Average"
-  threshold           = 60
+  threshold           = 60000
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    DBInstanceIdentifier = var.rds_dr_instance_id
+    DBClusterIdentifier = var.rds_dr_instance_id
   }
 
   alarm_actions = [aws_sns_topic.alarms.arn]
@@ -250,13 +253,13 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title  = "RDS Primary - CPU + Connections"
+          title  = "Aurora Primary - CPU + Connections"
           region = var.aws_region
           view   = "timeSeries"
           stat   = "Average"
           period = 60
           metrics = var.rds_instance_id != "" ? [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_id],
+            ["AWS/RDS", "CPUUtilization", "DBClusterIdentifier", var.rds_instance_id],
             [".", "DatabaseConnections", ".", "."],
           ] : []
         }
@@ -268,13 +271,13 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title  = "RDS DR - Replica lag (seconds)"
+          title  = "Aurora DR - Global replication lag (ms)"
           region = "ap-southeast-2"
           view   = "timeSeries"
           stat   = "Average"
           period = 60
           metrics = var.rds_dr_instance_id != "" ? [
-            ["AWS/RDS", "ReplicaLag", "DBInstanceIdentifier", var.rds_dr_instance_id],
+            ["AWS/RDS", "AuroraGlobalDBReplicationLag", "DBClusterIdentifier", var.rds_dr_instance_id],
           ] : []
         }
       },

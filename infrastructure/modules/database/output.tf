@@ -1,30 +1,46 @@
+output "global_cluster_id" {
+  description = "Aurora Global Database identifier (DR secondary cluster joins this)"
+  value       = aws_rds_global_cluster.main.id
+}
+
+output "cluster_id" {
+  description = "Primary Aurora cluster identifier (used by monitoring dimensions)"
+  value       = aws_rds_cluster.main.cluster_identifier
+}
+
+output "cluster_arn" {
+  description = "Primary Aurora cluster ARN"
+  value       = aws_rds_cluster.main.arn
+}
+
+# Kept for naming compatibility with callers that still pass db_instance_id /
+# db_instance_arn (root main.tf, monitoring).
 output "db_instance_id" {
-  value = aws_db_instance.main.id
+  description = "Alias of cluster_id - Aurora CloudWatch metrics use DBClusterIdentifier"
+  value       = aws_rds_cluster.main.cluster_identifier
 }
 
 output "db_instance_arn" {
-  description = "ARN of the primary DB instance (used as source for cross-region read replica in 5B)"
-  value       = aws_db_instance.main.arn
+  description = "Alias of cluster_arn"
+  value       = aws_rds_cluster.main.arn
 }
 
 output "writer_endpoint" {
-  description = "DB endpoint (single instance — same endpoint for read and write)"
-  value       = aws_db_instance.main.address
+  description = "Cluster writer endpoint (always points at the current primary instance)"
+  value       = aws_rds_cluster.main.endpoint
 }
 
-# Kept for naming compatibility with the original plan. Points to the same
-# single instance — there is no separate reader endpoint in this fallback.
 output "reader_endpoint" {
-  description = "Same as writer_endpoint (no replicas in free-tier deployment)"
-  value       = aws_db_instance.main.address
+  description = "Cluster reader endpoint - load-balances reads across the 2 reader instances"
+  value       = aws_rds_cluster.main.reader_endpoint
 }
 
 output "database_name" {
-  value = aws_db_instance.main.db_name
+  value = aws_rds_cluster.main.database_name
 }
 
 output "master_username" {
-  value = aws_db_instance.main.username
+  value = aws_rds_cluster.main.master_username
 }
 
 output "master_user_secret_arn" {
@@ -33,5 +49,5 @@ output "master_user_secret_arn" {
 }
 
 output "port" {
-  value = aws_db_instance.main.port
+  value = aws_rds_cluster.main.port
 }

@@ -50,7 +50,7 @@ module "vpc_core" {
 }
 
 # =============================================================================
-# VPC Data Layer — 10.2.0.0/16 (Aurora + Redis)
+# VPC Data Layer — 10.2.0.0/16 (Aurora)
 # =============================================================================
 module "vpc_data" {
   source       = "./modules/vpc_data"
@@ -126,7 +126,7 @@ module "vpc_endpoint_core" {
   interface_services = ["ecr.api", "ecr.dkr", "logs"]
 }
 
-# Data: S3 only (Aurora and Redis don't need ECR/CloudWatch interface endpoints)
+# Data: S3 only (Aurora doesn't need ECR/CloudWatch interface endpoints)
 module "vpc_endpoint_data" {
   source          = "./modules/vpc_endpoint"
   name_prefix     = "${var.project_name}-Data"
@@ -185,8 +185,8 @@ module "monitoring" {
   alb_arn_suffix     = module.app_fargate.alb_arn_suffix
   ecs_cluster_name   = module.app_fargate.ecs_cluster_name
   ecs_service_name   = module.app_fargate.ecs_service_name
-  rds_instance_id    = module.database.db_instance_id
-  rds_dr_instance_id = module.database_dr.replica_id
+  rds_instance_id    = module.database.cluster_id
+  rds_dr_instance_id = module.database_dr.cluster_id
 }
 
 # =============================================================================
@@ -207,15 +207,20 @@ module "dr_region" {
 }
 
 # =============================================================================
-# DR Database (Phase 5B) - cross-region read replica of primary RDS
+# DR Database (Phase 5B) - cross-region Aurora secondary cluster
+# (Aurora Global Database). Joins the global cluster created in `database`.
 # =============================================================================
 module "database_dr" {
   source       = "./modules/database_dr"
   project_name = var.project_name
 
-  source_db_arn        = module.database.db_instance_arn
+  global_cluster_id    = module.database.global_cluster_id
   vpc_data_dr_id       = module.dr_region.vpc_data_dr_id
   db_subnet_group_name = module.dr_region.vpc_data_dr_db_subnet_group
+
+  # The secondary cluster can only attach after the primary cluster (the global
+  # cluster's first member) exists and is available.
+  depends_on = [module.database]
 
   providers = {
     aws    = aws
@@ -264,7 +269,7 @@ module "api_lambda" {
 }
 
 # =============================================================================
-# Aurora (Phase 4B) - 1 Writer + 2 Reader across 3 AZ in VPC Data
+# Aurora (Phase 4B) - Global cluster + 1 Writer + 2 Reader across 3 AZ in VPC Data
 # =============================================================================
 module "database" {
   source       = "./modules/database"

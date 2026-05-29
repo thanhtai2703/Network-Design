@@ -38,7 +38,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# 5. DB Subnet Group (dùng sau cho Aurora — task 4.1)
+# 5. DB Subnet Group (dùng cho Aurora — task 4.1)
 resource "aws_db_subnet_group" "aurora" {
   name       = "${lower(var.project_name)}-aurora-subnet-group"
   subnet_ids = aws_subnet.private[*].id
@@ -46,10 +46,5 @@ resource "aws_db_subnet_group" "aurora" {
   tags = { Name = "${var.project_name}-Aurora-Subnet-Group" }
 }
 
-# 6. ElastiCache Subnet Group (dùng sau cho Redis — task 4.2)
-resource "aws_elasticache_subnet_group" "redis" {
-  name       = "${lower(var.project_name)}-redis-subnet-group"
-  subnet_ids = aws_subnet.private[*].id
-
-  tags = { Name = "${var.project_name}-Redis-Subnet-Group" }
-}
+# ElastiCache Redis đã bị loại khỏi thiết kế (theo yêu cầu) — không tạo
+# elasticache_subnet_group nữa.

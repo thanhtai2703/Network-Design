@@ -78,16 +78,6 @@ resource "aws_vpc_security_group_egress_rule" "fargate_to_aurora" {
   description       = "Fargate to Aurora (cross-VPC via TGW)"
 }
 
-resource "aws_vpc_security_group_egress_rule" "fargate_to_redis" {
-  for_each          = toset(var.vpc_data_private_cidrs)
-  security_group_id = aws_security_group.fargate.id
-  cidr_ipv4         = each.value
-  from_port         = 6379
-  to_port           = 6379
-  ip_protocol       = "tcp"
-  description       = "Fargate to Redis (cross-VPC via TGW)"
-}
-
 resource "aws_vpc_security_group_egress_rule" "fargate_to_internet_https" {
   security_group_id = aws_security_group.fargate.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -211,39 +201,7 @@ resource "aws_vpc_security_group_ingress_rule" "aurora_from_bastion" {
 
 
 # -----------------------------------------------------------------------------
-# 7. sg-redis (VPC Data) — ElastiCache cluster
-# -----------------------------------------------------------------------------
-resource "aws_security_group" "redis" {
-  name        = "${var.project_name}-sg-redis"
-  description = "ElastiCache Redis, accept from Fargate and Lambda"
-  vpc_id      = var.vpc_data_id
-
-  tags = { Name = "${var.project_name}-sg-redis" }
-}
-
-resource "aws_vpc_security_group_ingress_rule" "redis_from_core" {
-  for_each          = toset(var.vpc_core_private_cidrs)
-  security_group_id = aws_security_group.redis.id
-  cidr_ipv4         = each.value
-  from_port         = 6379
-  to_port           = 6379
-  ip_protocol       = "tcp"
-  description       = "From VPC Core private"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "redis_from_bastion" {
-  for_each          = toset(var.vpc_mgmt_public_cidrs)
-  security_group_id = aws_security_group.redis.id
-  cidr_ipv4         = each.value
-  from_port         = 6379
-  to_port           = 6379
-  ip_protocol       = "tcp"
-  description       = "From Bastion (admin)"
-}
-
-
-# -----------------------------------------------------------------------------
-# 8. sg-vpc-endpoint-data (VPC Data)
+# 7. sg-vpc-endpoint-data (VPC Data)
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "vpc_endpoint_data" {
   name        = "${var.project_name}-sg-vpce-data"
@@ -264,7 +222,7 @@ resource "aws_vpc_security_group_ingress_rule" "vpce_data_https" {
 
 
 # -----------------------------------------------------------------------------
-# 9. sg-bastion (VPC Mgmt) — Bastion EC2 jump host
+# 8. sg-bastion (VPC Mgmt) — Bastion EC2 jump host
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "bastion" {
   name        = "${var.project_name}-sg-bastion"
@@ -282,6 +240,17 @@ resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
   to_port           = 22
   ip_protocol       = "tcp"
   description       = "SSH from admin"
+}
+
+# Phase 6 demo: allow ICMP from any internal CIDR so office workstation,
+# client VPN users, and other VPCs can ping Bastion as a connectivity test.
+resource "aws_vpc_security_group_ingress_rule" "bastion_icmp_internal" {
+  security_group_id = aws_security_group.bastion.id
+  cidr_ipv4         = "10.0.0.0/8"
+  ip_protocol       = "icmp"
+  from_port         = -1
+  to_port           = -1
+  description       = "ICMP from any internal CIDR (connectivity test)"
 }
 
 resource "aws_vpc_security_group_egress_rule" "bastion_to_core" {
@@ -311,15 +280,6 @@ resource "aws_vpc_security_group_egress_rule" "bastion_to_aurora" {
   description       = "Admin to Aurora"
 }
 
-resource "aws_vpc_security_group_egress_rule" "bastion_to_redis" {
-  security_group_id = aws_security_group.bastion.id
-  cidr_ipv4         = var.vpc_data_cidr
-  from_port         = 6379
-  to_port           = 6379
-  ip_protocol       = "tcp"
-  description       = "Admin to Redis"
-}
-
 resource "aws_vpc_security_group_egress_rule" "bastion_to_internet_https" {
   security_group_id = aws_security_group.bastion.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -341,7 +301,7 @@ resource "aws_vpc_security_group_egress_rule" "bastion_to_dr_data" {
 
 
 # -----------------------------------------------------------------------------
-# 10. sg-vpc-endpoint-mgmt (VPC Mgmt)
+# 9. sg-vpc-endpoint-mgmt (VPC Mgmt)
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "vpc_endpoint_mgmt" {
   name        = "${var.project_name}-sg-vpce-mgmt"

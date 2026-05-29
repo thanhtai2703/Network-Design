@@ -32,10 +32,6 @@ output "vpc_data_db_subnet_group" {
   value = module.vpc_data.db_subnet_group_name
 }
 
-output "vpc_data_redis_subnet_group" {
-  value = module.vpc_data.elasticache_subnet_group_name
-}
-
 # ---------------------------------------------------------------------------
 # VPC Mgmt
 # ---------------------------------------------------------------------------
@@ -59,7 +55,6 @@ output "sg_ids" {
     vpn       = module.security_groups.sg_vpn_id
     vpce_core = module.security_groups.sg_vpc_endpoint_core_id
     aurora    = module.security_groups.sg_aurora_id
-    redis     = module.security_groups.sg_redis_id
     vpce_data = module.security_groups.sg_vpc_endpoint_data_id
     bastion   = module.security_groups.sg_bastion_id
     vpce_mgmt = module.security_groups.sg_vpc_endpoint_mgmt_id

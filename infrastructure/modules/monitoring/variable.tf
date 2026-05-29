@@ -31,13 +31,13 @@ variable "ecs_service_name" {
 }
 
 variable "rds_instance_id" {
-  description = "Primary RDS instance identifier"
+  description = "Primary Aurora cluster identifier (DBClusterIdentifier dimension)"
   type        = string
   default     = ""
 }
 
 variable "rds_dr_instance_id" {
-  description = "DR RDS read replica identifier (for ReplicaLag alarm)"
+  description = "DR Aurora secondary cluster identifier (for AuroraGlobalDBReplicationLag alarm)"
   type        = string
   default     = ""
 }
