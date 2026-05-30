@@ -87,6 +87,14 @@ resource "aws_vpc_security_group_egress_rule" "fargate_to_internet_https" {
   description       = "Pull ECR image, call AWS API"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "fargate_from_internal" {
+  security_group_id = aws_security_group.fargate.id
+  cidr_ipv4         = "10.0.0.0/8" 
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  description       = "Allow HTTP direct from internal networks and Client VPN"
+}
 
 # -----------------------------------------------------------------------------
 # 3. sg-lambda (VPC Core) — Lambda ENI in private subnet
@@ -299,6 +307,14 @@ resource "aws_vpc_security_group_egress_rule" "bastion_to_dr_data" {
   description       = "Bastion to RDS DR (cross-region via TGW peering)"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "bastion_from_internal" {
+  security_group_id = aws_security_group.bastion.id
+  cidr_ipv4         = "10.0.0.0/8" # Cho phép kết nối SSH/Netcat từ hầm VPN nội bộ
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+  description       = "Allow SSH probe from internal networks and Client VPN"
+}
 
 # -----------------------------------------------------------------------------
 # 9. sg-vpc-endpoint-mgmt (VPC Mgmt)

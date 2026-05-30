@@ -74,5 +74,5 @@ variable "client_vpn_cidr_block" {
 variable "notification_email" {
   description = "Email to receive CloudWatch alarm notifications (Phase 5D). AWS will send a confirmation link after apply - must be clicked."
   type        = string
-  default     = "23521380@gm.uit.edu.vn"
+  default     = "23521325@gm.uit.edu.vn"
 }
